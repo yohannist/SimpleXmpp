@@ -29,16 +29,15 @@ namespace SimpleXmpp.Net
             this.Hostname = hostname;
             this.Port = port;
             this.IsSslConnection = isSslConnection;
+
+            // create new socket
+            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            // ipv6?
+            //this.IsIpV6 ? new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
         }
 
         public void BeginConnect(OnConnectedEventHander runOnConnected)
         {
-            // create new socket
-            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-            // ipv6?
-            //this.IsIpV6 ? new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
-
             // save handler to call in onConnected() method
             this.OnConnected = runOnConnected;
 
@@ -58,15 +57,21 @@ namespace SimpleXmpp.Net
         {
             this.IsConnected = false;
 
-            // flush stream so awaiting methods will complete
-            this.networkStream.Flush();
+            if (this.networkStream != null)
+            {
+                // flush stream so awaiting methods will complete
+                this.networkStream.Flush();
 
-            // close read/write stream
-            this.networkStream.Close();
+                // close read/write stream
+                this.networkStream.Close();
+            }
 
-            // shutdown & disconnect socket
-            this.socket.Shutdown(SocketShutdown.Both);
-            this.socket.Disconnect(true);
+            if (this.socket.Connected)
+            {
+                // shutdown & disconnect socket
+                this.socket.Shutdown(SocketShutdown.Both);
+                this.socket.Disconnect(true);
+            }
         }
 
         public void Send(byte[] data)
