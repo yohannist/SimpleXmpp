@@ -13,7 +13,9 @@ namespace SimpleXmpp.Net
         private const SslProtocols DefaultSslProtocol = SslProtocols.Tls;
 
         public delegate void OnConnectedEventHander(Stream networkStream);
+        public delegate void OnConnectExceptionHandler(Exception ex);
         private event OnConnectedEventHander OnConnected;
+        public event OnConnectExceptionHandler OnConnectException;
 
         private Socket socket;
         private Stream networkStream;
@@ -39,17 +41,17 @@ namespace SimpleXmpp.Net
         public void BeginConnect(OnConnectedEventHander runOnConnected)
         {
             // save handler to call in onConnected() method
-            this.OnConnected = runOnConnected;
+            this.OnConnected += runOnConnected;
 
             try
             {
                 // begin async connect
                 this.socket.BeginConnect(this.Hostname, this.Port, onConnected, socket);
             }
-            catch
+            catch (Exception ex)
             {
-                // todo: log error
-                throw;
+                // bubble exception using events 
+                onConnectException(ex);
             }
         }
 
@@ -81,19 +83,28 @@ namespace SimpleXmpp.Net
 
         private void onConnected(IAsyncResult result)
         {
-            // end connect when connected
-            var socket = (Socket)result.AsyncState;
-            socket.EndConnect(result);
-
-            // create stream
-            this.networkStream = new NetworkStream(socket);
-
-            // init ssl stream
-            if (this.IsSslConnection)
+            try
             {
-                this.networkStream = initXmppSslConnection(this.networkStream, this.Hostname, DefaultSslProtocol);
+                // end connect when connected
+                var socket = (Socket)result.AsyncState;
+                socket.EndConnect(result);
+
+                // create stream
+                this.networkStream = new NetworkStream(socket);
+
+                // init ssl stream
+                if (this.IsSslConnection)
+                {
+                    this.networkStream = initXmppSslConnection(this.networkStream, this.Hostname, DefaultSslProtocol);
+                }
+            }
+            catch (Exception ex)
+            {
+                // bubble exception using events 
+                onConnectException(ex);
             }
 
+            // connected & streams created successfully
             this.IsConnected = true;
             if (this.OnConnected != null)
             {
@@ -101,8 +112,19 @@ namespace SimpleXmpp.Net
                 // this is so that the caller can handle the stream reading & writing themselves
                 this.OnConnected(this.networkStream);
 
-                // remove event because it's not needed anymore
+                // event clean up because not needed
                 this.OnConnected = null;
+            }
+        }
+
+        private void onConnectException(Exception ex)
+        {
+            // todo: log
+
+            // bubble exception upwards
+            if (this.OnConnectException != null)
+            {
+                this.OnConnectException(ex);
             }
         }
 

@@ -19,9 +19,13 @@ namespace SimpleXmpp
         };
 
         public delegate void OnXElementHandler(XElement node);
+        public delegate void OnXExceptionHandler(XmlException exception);
+        public delegate void OnConnectExceptionHandler(Exception exception);
         public event OnXElementHandler OnXDocumentStart;
         public event OnXElementHandler OnXElementComplete;
         public event OnXElementHandler OnXDocumentEnd;
+        public event OnXExceptionHandler OnXmlException;
+        public event OnConnectExceptionHandler OnConnectException;
 
         private AsyncSocket asyncSocket;
         private bool IsConnected;
@@ -38,6 +42,7 @@ namespace SimpleXmpp
 
             // create socket
             this.asyncSocket = new AsyncSocket(this.Hostname, this.Port, this.UsesSslConnection);
+            this.asyncSocket.OnConnectException += handleConnectionException;
         }
 
         public void BeginConnect()
@@ -77,33 +82,53 @@ namespace SimpleXmpp
                     // create root node variable
                     XElement currentNode = null;
 
-                    // reader.ReadAsync() will only return false at the end of a document, otherwise it will keep waiting
-                    while (await reader.ReadAsync())
+                    try
                     {
-                        switch (reader.NodeType)
+                        // reader.ReadAsync() will only return false at the end of a document, otherwise it will keep waiting
+                        while (await reader.ReadAsync())
                         {
-                            case XmlNodeType.Element:
-                                // start of a tag
-                                tagStart(ref currentNode, reader);
-                                break;
-                            case XmlNodeType.Text:
-                            case XmlNodeType.CDATA:
-                                // text or cdata
-                                addText(ref currentNode, reader);
-                                break;
-                            case XmlNodeType.EndElement:
-                                // end of a tag
-                                tagEnd(ref currentNode, reader);
-                                break;
-                        }
+                            switch (reader.NodeType)
+                            {
+                                case XmlNodeType.Element:
+                                    // start of a tag
+                                    tagStart(ref currentNode, reader);
+                                    break;
+                                case XmlNodeType.Text:
+                                case XmlNodeType.CDATA:
+                                    // text or cdata
+                                    addText(ref currentNode, reader);
+                                    break;
+                                case XmlNodeType.EndElement:
+                                    // end of a tag
+                                    tagEnd(ref currentNode, reader);
+                                    break;
+                            }
 
-                        // make connection check for better response
-                        if (!this.IsConnected)
-                        {
-                            return;
+                            // make connection check for better response
+                            if (!this.IsConnected)
+                            {
+                                return;
+                            }
                         }
                     }
+                    catch (XmlException ex)
+                    {
+                        // call private onXmlException
+                        onXmlException(ex);
+                        //throw;
+                    }
                 }
+            }
+        }
+
+        private void onXmlException(XmlException ex)
+        {
+            // do something? like log?
+            // raise event because the exception thown is in a background thread
+            // there's no way for the exception to bubble back to the main thread
+            if (this.OnXmlException != null)
+            {
+                this.OnXmlException(ex);
             }
         }
 
@@ -278,6 +303,18 @@ namespace SimpleXmpp
                 {
                     currentNode.Add(attributes);
                 }
+            }
+        }
+
+        private void handleConnectionException(Exception ex)
+        {
+            // to do: log something
+            // otherwise..nothing to do, really.
+
+            // bubble exception upwards
+            if (this.OnConnectException != null)
+            {
+                this.OnConnectException(ex);
             }
         }
     }
