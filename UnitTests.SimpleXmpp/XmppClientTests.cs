@@ -14,6 +14,8 @@ namespace UnitTests.SimpleXmpp
     [TestClass]
     public class XmppClientTests
     {
+        // add test comment
+
         /// <summary>
         /// constructor - hostname, port, ssl saved
         /// </summary>
