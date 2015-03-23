@@ -39,6 +39,9 @@
     <Reference Include="SimpleXmpp.Fakes">
       <HintPath>FakesAssemblies\SimpleXmpp.Fakes.dll</HintPath>
     </Reference>
+    <Reference Include="SimpleXmpp.Protocol.Sasl.Fakes">
+      <HintPath>FakesAssemblies\SimpleXmpp.Protocol.Sasl.Fakes.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.XML" />
     <Reference Include="System.Xml.Linq" />
@@ -56,10 +59,15 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="XmppClientTests.cs" />
+    <Compile Include="AsyncXmppReaderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="XmppClientTests.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SimpleXmpp.Protocol.Sasl\SimpleXmpp.Protocol.Sasl.csproj">
+      <Project>{a4a3dc69-c70c-4e7c-8ca8-d687c6008455}</Project>
+      <Name>SimpleXmpp.Protocol.Sasl</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SimpleXmpp\SimpleXmpp.csproj">
       <Project>{a23e1be4-121b-4349-bde7-df7a2c6813db}</Project>
       <Name>SimpleXmpp</Name>
@@ -67,6 +75,12 @@
   </ItemGroup>
   <ItemGroup>
     <Fakes Include="Fakes\SimpleXmpp.fakes" />
+  </ItemGroup>
+  <ItemGroup>
+    <Fakes Include="Fakes\SimpleXmpp.Protocol.Sasl.fakes" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

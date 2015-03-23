@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleXmpp", "SimpleXmpp\Si
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests.SimpleXmpp", "UnitTests.SimpleXmpp\UnitTests.SimpleXmpp.csproj", "{871B70C1-5B6E-438C-8E0B-B8877D23D4D3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleXmpp.Protocol.Sasl", "SimpleXmpp.Protocol.Sasl\SimpleXmpp.Protocol.Sasl.csproj", "{A4A3DC69-C70C-4E7C-8CA8-D687C6008455}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{871B70C1-5B6E-438C-8E0B-B8877D23D4D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{871B70C1-5B6E-438C-8E0B-B8877D23D4D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{871B70C1-5B6E-438C-8E0B-B8877D23D4D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4A3DC69-C70C-4E7C-8CA8-D687C6008455}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4A3DC69-C70C-4E7C-8CA8-D687C6008455}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4A3DC69-C70C-4E7C-8CA8-D687C6008455}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4A3DC69-C70C-4E7C-8CA8-D687C6008455}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
