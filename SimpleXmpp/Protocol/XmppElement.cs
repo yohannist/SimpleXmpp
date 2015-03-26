@@ -15,13 +15,13 @@ namespace SimpleXmpp.Protocol
 
         }
 
-        protected string GetAttributeValue(string name)
+        public string GetAttributeValue(string name)
         {
             var attribute = base.Attribute(name);
             return attribute == null ? null : attribute.Value;
         }
 
-        protected void SetAttributeValue(string name, string value)
+        public void SetAttributeValue(string name, string value)
         {
             var attribute = base.Attribute(name);
             if (attribute != null)
@@ -39,7 +39,7 @@ namespace SimpleXmpp.Protocol
         /// </summary>
         /// <param name="name">The name to match.</param>
         /// <returns></returns>
-        protected XmppElement GetElement(string name)
+        public XmppElement GetElement(string name)
         {
             return base.Element(name) as XmppElement;
         }
@@ -49,7 +49,7 @@ namespace SimpleXmpp.Protocol
         /// </summary>
         /// <param name="name">The name to match.</param>
         /// <returns></returns>
-        protected IEnumerable<XmppElement> GetElements(string name)
+        public IEnumerable<XmppElement> GetElements(string name)
         {
             return base.Elements(name).Select(e => e as XmppElement);
         }

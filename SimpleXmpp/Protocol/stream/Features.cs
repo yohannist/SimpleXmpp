@@ -10,20 +10,11 @@ namespace SimpleXmpp.Protocol.stream
     public class Features : XmppElement
     {
         public const string Name = "features";
-        private const string MechanismsElementName = "mechanisms";
 
         public Features()
             : base(Name)
         {
             
-        }
-
-        public XmppElement Mechanisms
-        {
-            get 
-            {
-                return base.GetElement(MechanismsElementName);
-            }
         }
     }
 }

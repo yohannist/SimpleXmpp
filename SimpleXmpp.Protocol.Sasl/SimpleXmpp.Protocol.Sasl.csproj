@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="Auth.cs" />
     <Compile Include="Failure.cs" />
+    <Compile Include="FeaturesExtension.cs" />
     <Compile Include="Success.cs" />
     <Compile Include="Mechanism.cs" />
     <Compile Include="Mechanisms.cs" />
