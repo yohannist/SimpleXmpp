@@ -11,15 +11,16 @@ namespace SimpleXmpp
     public class XmppClient
     {
         public delegate void OnConnectExceptionHandler(Exception exception);
+        public delegate void OnConnectedEventHandler();
         /// <summary>
         /// Called when there is an exception thrown while trying to connect to the remote location.
         /// </summary>
         public event OnConnectExceptionHandler OnConnectException;
+        public event OnConnectedEventHandler OnConnected;
 
         private AsyncSocket asyncSocket;
         private AsyncXmppReader asyncXmlReader;
-        private bool isConnected;
-
+        
         /// <summary>
         /// Gets the hostname set in the constructor
         /// </summary>
@@ -64,7 +65,6 @@ namespace SimpleXmpp
 
         public void Disconnect()
         {
-            this.isConnected = false;
             this.asyncSocket.Disconnect();
             this.asyncXmlReader.StopReading();
         }
@@ -77,8 +77,6 @@ namespace SimpleXmpp
         /// <exception cref="XmlException">When there are more than 1 root element</exception>
         private void onConnected(Stream networkStream)
         {
-            this.isConnected = true;
-
             // once connected, we can open an XmlReader and asynchronously read the stream
             this.asyncXmlReader.BeginReading(networkStream);
         }
