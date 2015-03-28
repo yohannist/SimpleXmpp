@@ -6,6 +6,7 @@ namespace SimpleXmpp
     using SimpleXmpp.Protocol;
     using SimpleXmpp.Readers;
     using System.IO;
+    using System.Text;
     using System.Xml;
 
     public class XmppClient
@@ -67,6 +68,15 @@ namespace SimpleXmpp
         {
             this.asyncSocket.Disconnect();
             this.asyncXmlReader.StopReading();
+        }
+
+        public void Send(XmppElement xmppDocument)
+        {
+            // convert document into bytes
+            var data = Encoding.UTF8.GetBytes(xmppDocument.ToString());
+
+            // send through our socket
+            this.asyncSocket.Send(data);
         }
 
         /// <summary>

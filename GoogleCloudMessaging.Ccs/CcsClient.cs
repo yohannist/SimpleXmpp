@@ -15,6 +15,14 @@ namespace GoogleCloudMessaging.Ccs
         private const string StagingCcsEndpoint = "gcm-preprod.googleapis.com";
         private const int StagingCcsPort = 5236;
 
+        public delegate void OnConnectExceptionHandler(Exception exception);
+        public delegate void OnConnectedEventHandler();
+        /// <summary>
+        /// Called when there is an exception thrown while trying to connect to the remote location.
+        /// </summary>
+        public event OnConnectExceptionHandler OnConnectException;
+        public event OnConnectedEventHandler OnConnected;
+
         private XmppClient xmppClient;
 
         public string SenderId { get; private set; }
@@ -34,16 +42,16 @@ namespace GoogleCloudMessaging.Ccs
             this.Port = useStagingGcmServers ? StagingCcsPort : CcsPort;
 
             // must use ssl connection for gcm-ccs
+            // // bind connect handlers
             this.xmppClient = new XmppClient(this.Endpoint, this.Port, true);
+            this.xmppClient.OnConnected += onConnected;
+            this.xmppClient.OnConnectException += onConnectException;
 
             // setup sasl hander
         }
 
         public void BeginConnect()
         {
-            // bind connected handler
-            this.xmppClient.OnConnected += onConnected;
-
             // connect to xmpp client
             this.xmppClient.BeginConnect();
         }
@@ -53,9 +61,16 @@ namespace GoogleCloudMessaging.Ccs
             // send init
             var stream = new Stream()
             {
-                To = "",
+                To = "gcm.googleapis.com",
                 Version = "1.0",
             };
+
+            this.xmppClient.Send(stream);
+        }
+
+        private void onConnectException(Exception ex)
+        {
+
         }
     }
 }
