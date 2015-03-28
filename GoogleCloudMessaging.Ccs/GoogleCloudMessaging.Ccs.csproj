@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A4A3DC69-C70C-4E7C-8CA8-D687C6008455}</ProjectGuid>
+    <ProjectGuid>{E3B0B63E-257B-4868-9433-D6B240AE6F70}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SimpleXmpp.Protocol.Sasl</RootNamespace>
-    <AssemblyName>SimpleXmpp.Protocol.Sasl</AssemblyName>
+    <RootNamespace>GoogleCloudMessaging.Ccs</RootNamespace>
+    <AssemblyName>GoogleCloudMessaging.Ccs</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -39,15 +39,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Auth.cs" />
-    <Compile Include="Failure.cs" />
-    <Compile Include="FeaturesExtension.cs" />
-    <Compile Include="Success.cs" />
-    <Compile Include="Mechanism.cs" />
-    <Compile Include="Mechanisms.cs" />
+    <Compile Include="CcsClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SimpleXmpp.Protocol.Sasl\SimpleXmpp.Protocol.Sasl.csproj">
+      <Project>{a4a3dc69-c70c-4e7c-8ca8-d687c6008455}</Project>
+      <Name>SimpleXmpp.Protocol.Sasl</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SimpleXmpp\SimpleXmpp.csproj">
       <Project>{a23e1be4-121b-4349-bde7-df7a2c6813db}</Project>
       <Name>SimpleXmpp</Name>
