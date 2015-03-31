@@ -18,30 +18,25 @@ namespace SimpleXmpp.Readers
             IgnoreProcessingInstructions = true
         };
 
-        public delegate void OnXmppElementHandler(XmppElement node);
+        public delegate void OnXmppElementEventHandler(XmppElement node);
         public delegate void OnXmlExceptionHandler(XmlException exception);
         /// <summary>
         /// Called on the opening tag of a new document. Only contains the opening tag.
         /// </summary>
-        public event OnXmppElementHandler OnXmlDocumentStart;
+        public event OnXmppElementEventHandler OnXmlDocumentStart;
         /// <summary>
         /// Called on the closing tag of a xml node. Contains the entire node.
         /// </summary>
-        public event OnXmppElementHandler OnXmlElementComplete;
+        public event OnXmppElementEventHandler OnXmlElementComplete;
         /// <summary>
         /// Called on the closing tag of the root element. Contains the entire document.
         /// </summary>
-        public event OnXmppElementHandler OnXmlDocumentEnd;
+        public event OnXmppElementEventHandler OnXmlDocumentEnd;
         /// <summary>
         /// Called when there is an exception thrown while parsing the document.
         /// </summary>
         public event OnXmlExceptionHandler OnXmlException;
-
-        /// <summary>
-        /// Determines whether to continue reading asynchronouly
-        /// </summary>
-        private bool isConnected;
-
+        
         /// <summary>
         /// Creates
         /// </summary>
@@ -50,79 +45,55 @@ namespace SimpleXmpp.Readers
 
         }
 
-        /// <summary>
-        /// Asynchronously reads xml data from a stream
-        /// </summary>
-        /// <param name="networkStream">The network stream returned by an open socket</param>
-        /// <exception cref="XmlException">Any XML parsing exceptions thrown by XmlReader</exception>
-        /// <exception cref="XmlException">When there are more than 1 root element</exception>
-        public void BeginReading(Stream networkStream)
+        public void ParseXmppElements(byte[] buffer, int length)
         {
-            this.isConnected = true;
-
-            Task.Run(async () => 
+            // run this in a background thread so the caller can be released
+            // it can be run in the background because the results are returned in events
+            Task.Run(() =>
             {
-                using (var reader = XmlReader.Create(networkStream, DefaultXmlReaderSettings))
+                // create stream from buffer
+                var stream = new MemoryStream(buffer, 0, length);
+
+                // create root node variable
+                XmppElement currentNode = null;
+
+                // create reader
+                using (var reader = XmlReader.Create(stream, DefaultXmlReaderSettings))
                 {
-                    // go into an infinite reading cycle until this connection is terminated
-                    // this loop will "async wait" at await reader.ReadAsync(), thus not consuming CPU cycle when not in use
-                    while (true)
+                    try
                     {
-                        // make connection check for better response
-                        if (!this.isConnected)
+                        // reader.Read() will only return false at the end of a document, otherwise it will keep waiting
+                        while (reader.Read())
                         {
-                            return;
-                        }
-
-                        // create root node variable
-                        XmppElement currentNode = null;
-
-                        try
-                        {
-                            // reader.ReadAsync() will only return false at the end of a document, otherwise it will keep waiting
-                            while (await reader.ReadAsync())
+                            switch (reader.NodeType)
                             {
-                                switch (reader.NodeType)
-                                {
-                                    case XmlNodeType.Element:
-                                        // start of a tag
-                                        tagStart(ref currentNode, reader);
-                                        break;
-                                    case XmlNodeType.Text:
-                                    case XmlNodeType.CDATA:
-                                        // text or cdata
-                                        addText(ref currentNode, reader);
-                                        break;
-                                    case XmlNodeType.EndElement:
-                                        // end of a tag
-                                        tagEnd(ref currentNode, reader);
-                                        break;
-                                }
-
-                                // make connection check for better response
-                                if (!this.isConnected)
-                                {
-                                    return;
-                                }
+                                case XmlNodeType.Element:
+                                    // start of a tag
+                                    tagStart(ref currentNode, reader);
+                                    break;
+                                case XmlNodeType.Text:
+                                case XmlNodeType.CDATA:
+                                    // text or cdata
+                                    addText(ref currentNode, reader);
+                                    break;
+                                case XmlNodeType.EndElement:
+                                    // end of a tag
+                                    tagEnd(ref currentNode, reader);
+                                    break;
                             }
                         }
-                        catch (XmlException ex)
-                        {
-                            // client has returned invalid xml data.
-                            // could be just data corruption, so trigger the exception event and continue reading
-                            // call private onXmlException
-                            onXmlException(ex);
-                        }
+                    }
+                    catch (XmlException ex)
+                    {
+                        // client has returned invalid xml data.
+                        // could be just data corruption, so trigger the exception event and continue reading
+                        // call private onXmlException
+                        onXmlException(ex);
                     }
                 }
             });
         }
-
-        public void StopReading()
-        {
-            isConnected = false;
-        }
-
+        
         private void tagStart(ref XmppElement currentNode, XmlReader reader)
         {
             var name = reader.LocalName;

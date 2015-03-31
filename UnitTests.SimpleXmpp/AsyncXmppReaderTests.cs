@@ -11,6 +11,7 @@ using SimpleXmpp.Protocol.stream.Fakes;
 using SimpleXmpp.Readers;
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -56,7 +57,7 @@ namespace UnitTests.SimpleXmpp
                 // use object to preserve reference
                 // ref/out parameters doesn't play well with lamba/anon functions
                 var parsingStates = new XmlParsingStates();
-                var reader = arrangeXmlReader(parsingStates);
+                var reader = arrangeXmppReader(parsingStates);
                 var stream = arrangeMarkupStream(markup);
 
                 // act
@@ -94,7 +95,7 @@ namespace UnitTests.SimpleXmpp
                 // use object to preserve reference
                 // ref/out parameters doesn't play well with lamba/anon functions
                 var parsingStates = new XmlParsingStates();
-                var reader = arrangeXmlReader(parsingStates);
+                var reader = arrangeXmppReader(parsingStates);
                 var stream = arrangeMarkupStream(markup);
 
                 var featuresConstructorCalled = false;
@@ -156,7 +157,7 @@ namespace UnitTests.SimpleXmpp
                 // use object to preserve reference
                 // ref/out parameters doesn't play well with lamba/anon functions
                 var parsingStates = new XmlParsingStates();
-                var reader = arrangeXmlReader(parsingStates);
+                var reader = arrangeXmppReader(parsingStates);
                 var stream = arrangeMarkupStream(markup);
 
                 // act
@@ -189,7 +190,7 @@ namespace UnitTests.SimpleXmpp
                 // use object to preserve reference
                 // ref/out parameters doesn't play well with lamba/anon functions
                 var parsingStates = new XmlParsingStates();
-                var reader = arrangeXmlReader(parsingStates);
+                var reader = arrangeXmppReader(parsingStates);
                 var stream = arrangeMarkupStream(markup);
 
                 // act
@@ -219,7 +220,7 @@ namespace UnitTests.SimpleXmpp
                 // use object to preserve reference
                 // ref/out parameters doesn't play well with lamba/anon functions
                 var parsingStates = new XmlParsingStates();
-                var reader = arrangeXmlReader(parsingStates);
+                var reader = arrangeXmppReader(parsingStates);
                 var stream = arrangeMarkupStream(markup);
 
                 // act
@@ -231,19 +232,13 @@ namespace UnitTests.SimpleXmpp
             }
         }
 
-        private System.IO.Stream arrangeMarkupStream(string markup)
+        private byte[] arrangeMarkupStream(string markup)
         {
-            // create fake stream to feed back into xmpp client 
-            var stream = new MemoryStream();
-            var writer = new StreamWriter(stream);
-            writer.Write(markup);
-            writer.Flush();
-            stream.Position = 0;
-
-            return stream;
+            // create fake buffer to feed back into xmpp client 
+            return Encoding.UTF8.GetBytes(markup);
         }
 
-        private AsyncXmppReader arrangeXmlReader(XmlParsingStates parseStates)
+        private AsyncXmppReader arrangeXmppReader(XmlParsingStates parseStates)
         {
             var reader = new AsyncXmppReader();
 
@@ -273,10 +268,10 @@ namespace UnitTests.SimpleXmpp
             return reader;
         }
 
-        private void actConnectSleepDisconnect(AsyncXmppReader reader, System.IO.Stream stream, WaitHandle waitHandle)
+        private void actConnectSleepDisconnect(AsyncXmppReader reader, byte[] buffer, WaitHandle waitHandle)
         {
             // connect
-            reader.BeginReading(stream);
+            reader.ParseXmppElements(buffer, buffer.Length);
 
             // wait up to a maximum of 5 sec for background thread to process
             // this merely indicates that the process has started
@@ -291,10 +286,7 @@ namespace UnitTests.SimpleXmpp
             {
                 // wait another 1 sec to make sure the process has completed
                 Thread.Sleep(1000);
-            }            
-
-            // disconnect
-            reader.StopReading();
+            }
         }
 
         private class XmlParsingStates

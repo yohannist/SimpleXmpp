@@ -8,6 +8,7 @@ namespace UnitTests.GoogleCloudMessaging.Ccs
     [TestClass]
     public class CcsClientTests
     {
+        [Ignore]
         [TestMethod]
         public void TestMethod1()
         {

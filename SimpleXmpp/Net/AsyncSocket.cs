@@ -12,10 +12,14 @@ namespace SimpleXmpp.Net
         private const int BufferSize = 4096;
         private const SslProtocols DefaultSslProtocol = SslProtocols.Tls;
 
-        public delegate void OnConnectedEventHander(Stream networkStream);
+        public delegate void OnConnectedEventHander();
         public delegate void OnConnectExceptionHandler(Exception ex);
-        private event OnConnectedEventHander OnConnected;
+        public delegate void OnDataReceivedEventHandler(byte[] data, int length);
+        public delegate void OnSocketUnexpectedlyClosedExceptionHandler(IOException ex);
+        public event OnConnectedEventHander OnConnected;
         public event OnConnectExceptionHandler OnConnectException;
+        public event OnDataReceivedEventHandler OnDataReceived;
+        public event OnSocketUnexpectedlyClosedExceptionHandler OnSocketUnexpectedClosed;
 
         private Socket socket;
         private Stream networkStream;
@@ -38,11 +42,8 @@ namespace SimpleXmpp.Net
             //this.IsIpV6 ? new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp)
         }
 
-        public void BeginConnect(OnConnectedEventHander runOnConnected)
+        public void BeginConnect()
         {
-            // save handler to call in onConnected() method
-            this.OnConnected += runOnConnected;
-
             try
             {
                 // begin async connect
@@ -81,6 +82,19 @@ namespace SimpleXmpp.Net
             this.networkStream.BeginWrite(data, 0, data.Length, onSendComplete, null);
         }
 
+        private void beginReading()
+        {
+            try
+            {
+                this.networkStream.BeginRead(this.buffer, 0, BufferSize, onDataReceived, this.networkStream);
+            }
+            catch (IOException ex)
+            {
+                // IOException means that underling socket is closed
+                this.onSocketUnexpectedClosed(ex);
+            }
+        }
+
         private void onConnected(IAsyncResult result)
         {
             try
@@ -97,6 +111,10 @@ namespace SimpleXmpp.Net
                 {
                     this.networkStream = initXmppSslConnection(this.networkStream, this.Hostname, DefaultSslProtocol);
                 }
+
+                // use a BufferedStream to increase performance
+                // this can only be done in .NET4.5 because BufferedStream has been upgraded to support async functions
+                this.networkStream = new BufferedStream(this.networkStream);
             }
             catch (Exception ex)
             {
@@ -106,15 +124,15 @@ namespace SimpleXmpp.Net
 
             // connected & streams created successfully
             this.IsConnected = true;
+
+            // bubble event up
             if (this.OnConnected != null)
             {
-                // return the network stream back to the caller
-                // this is so that the caller can handle the stream reading & writing themselves
-                this.OnConnected(this.networkStream);
-
-                // event clean up because not needed
-                this.OnConnected = null;
+                this.OnConnected();
             }
+
+            // begin asynchronously reading
+            this.beginReading();
         }
 
         private void onConnectException(Exception ex)
@@ -125,6 +143,56 @@ namespace SimpleXmpp.Net
             if (this.OnConnectException != null)
             {
                 this.OnConnectException(ex);
+            }
+        }
+
+        private void onDataReceived(IAsyncResult result)
+        {
+            int bytesRead = 0;
+            try
+            {
+                // complete the reading process
+                bytesRead = this.networkStream.EndRead(result);
+            }
+            catch (IOException ex)
+            {
+                // IOException means that underling socket is closed
+                this.onSocketUnexpectedClosed(ex);
+
+                // socket closed, no need to continue to process
+                return;
+            }
+
+            // only process if bytes received is more than 0
+            if (bytesRead > 0)
+            {
+                // send it upwards
+                if (this.OnDataReceived != null)
+                {
+                    this.OnDataReceived(this.buffer, bytesRead);
+                }
+            }
+
+            // check if disconnected for a responsive return
+            if (!this.IsConnected)
+            {
+                return;
+            }
+
+            // continue reading
+            this.beginReading();
+        }
+
+        private void onSocketUnexpectedClosed(IOException ex)
+        {
+            // IOException means that underling socket is closed
+            // make sure disconnect processes run
+            this.Disconnect();
+
+            // bubble event up
+            if (this.OnSocketUnexpectedClosed != null)
+            {
+                this.OnSocketUnexpectedClosed(ex);
             }
         }
 

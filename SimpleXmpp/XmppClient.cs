@@ -11,16 +11,24 @@ namespace SimpleXmpp
 
     public class XmppClient
     {
-        public delegate void OnConnectExceptionHandler(Exception exception);
+        public delegate void OnConnectExceptionHandler(Exception ex);
         public delegate void OnConnectedEventHandler();
+        public delegate void OnSocketUnexpectedlyClosedHandler(IOException ex);
+        public delegate void OnXmppElementEventHandler(XmppElement element);
+        public delegate void OnXmlExceptionHandler(XmlException ex);
         /// <summary>
         /// Called when there is an exception thrown while trying to connect to the remote location.
         /// </summary>
         public event OnConnectExceptionHandler OnConnectException;
         public event OnConnectedEventHandler OnConnected;
+        public event OnSocketUnexpectedlyClosedHandler OnSocketUnexpectedlyClosed;
+        public event OnXmppElementEventHandler OnNewDocument;
+        public event OnXmppElementEventHandler OnNewElement;
+        public event OnXmppElementEventHandler OnDocumentComplete;
+        public event OnXmlExceptionHandler OnXmlException;
 
         private AsyncSocket asyncSocket;
-        private AsyncXmppReader asyncXmlReader;
+        private AsyncXmppReader asyncXmppReader;
         
         /// <summary>
         /// Gets the hostname set in the constructor
@@ -49,25 +57,27 @@ namespace SimpleXmpp
 
             // create socket
             this.asyncSocket = new AsyncSocket(this.Hostname, this.Port, this.UsesSslConnection);
-            this.asyncSocket.OnConnectException += handleConnectionException;
+            this.asyncSocket.OnConnected += onConnected;
+            this.asyncSocket.OnConnectException += onConnectionException;
+            this.asyncSocket.OnDataReceived += onDataReceived;
+            this.asyncSocket.OnSocketUnexpectedClosed += onSocketUnexpectedlyClosed;
 
             // create reader object and bind events
-            this.asyncXmlReader = new AsyncXmppReader();
-            this.asyncXmlReader.OnXmlDocumentStart += handleXmlDocumentStart;
-            this.asyncXmlReader.OnXmlDocumentEnd += handleXmlDocumentEnd;
-            this.asyncXmlReader.OnXmlElementComplete += handleNewXmlElement;
-            this.asyncXmlReader.OnXmlException += handleXmlException;
+            this.asyncXmppReader = new AsyncXmppReader();
+            this.asyncXmppReader.OnXmlDocumentStart += onXmppDocumentStart;
+            this.asyncXmppReader.OnXmlDocumentEnd += onXmppDocumentEnd;
+            this.asyncXmppReader.OnXmlElementComplete += onXmppElement;
+            this.asyncXmppReader.OnXmlException += onXmlException;
         }
 
         public void BeginConnect()
         {
-            this.asyncSocket.BeginConnect(onConnected);
+            this.asyncSocket.BeginConnect();
         }
 
         public void Disconnect()
         {
             this.asyncSocket.Disconnect();
-            this.asyncXmlReader.StopReading();
         }
 
         public void Send(XmppElement xmppDocument)
@@ -79,41 +89,16 @@ namespace SimpleXmpp
             this.asyncSocket.Send(data);
         }
 
-        /// <summary>
-        /// When connected, this method takes the connected stream and waits for incoming data. It expects XML data to be sent.
-        /// </summary>
-        /// <param name="networkStream">The network stream returned by an open socket</param>
-        /// <exception cref="XmlException">Any XML parsing exceptions thrown by XmlReader</exception>
-        /// <exception cref="XmlException">When there are more than 1 root element</exception>
-        private void onConnected(Stream networkStream)
-        {
-            // once connected, we can open an XmlReader and asynchronously read the stream
-            this.asyncXmlReader.BeginReading(networkStream);
+        private void onConnected()
+        {   
+            // bubble event upwards
+            if (this.OnConnected != null)
+            {
+                this.OnConnected();
+            }
         }
 
-        private void handleXmlDocumentStart(XmppElement root)
-        {
-            // create xmpp element
-            // call document start event
-        }
-
-        private void handleNewXmlElement(XmppElement node)
-        {
-            // create xmpp element
-            
-        }
-
-        private void handleXmlDocumentEnd(XmppElement root)
-        {
-
-        }
-
-        private void handleXmlException(XmlException ex)
-        {
-
-        }
-
-        private void handleConnectionException(Exception ex)
+        private void onConnectionException(Exception ex)
         {
             // to do: log something
             // otherwise..nothing to do, really.
@@ -122,6 +107,60 @@ namespace SimpleXmpp
             if (this.OnConnectException != null)
             {
                 this.OnConnectException(ex);
+            }
+        }
+
+        private void onDataReceived(byte[] buffer, int length)
+        {
+            // send data into xmpp parser
+            // results will be return in events bound to this object
+            this.asyncXmppReader.ParseXmppElements(buffer, length);
+        }
+
+        private void onSocketUnexpectedlyClosed(IOException ex)
+        {
+            // to do: log something
+
+            // bubble exception upwards
+            if (this.OnSocketUnexpectedlyClosed != null)
+            {
+                this.OnSocketUnexpectedlyClosed(ex);
+            }
+        }
+
+        private void onXmppDocumentStart(XmppElement root)
+        {
+            // bubble event upwards
+            if (this.OnNewDocument != null)
+            {
+                this.OnNewDocument(root);
+            }
+        }
+
+        private void onXmppElement(XmppElement node)
+        {
+            // bubble event upwards
+            if (this.OnNewElement != null)
+            {
+                this.OnNewElement(node);
+            }
+        }
+
+        private void onXmppDocumentEnd(XmppElement root)
+        {
+            // bubble event upwards
+            if (this.OnDocumentComplete != null)
+            {
+                this.OnDocumentComplete(root);
+            }
+        }
+
+        private void onXmlException(XmlException ex)
+        {
+            // bubble exception upwards
+            if (this.OnXmlException != null)
+            {
+                this.OnXmlException(ex);
             }
         }
     }
