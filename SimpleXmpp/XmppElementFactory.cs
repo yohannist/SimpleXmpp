@@ -17,20 +17,34 @@ namespace SimpleXmpp
             typeWarehouse = new XmppElementTypeWarehouse();
 
             // load other assembiles indicated
-            var dynamicAssemblies = (NameValueCollection)ConfigurationManager.GetSection("assemblies");
-            foreach (string key in dynamicAssemblies)
-            {
-                Assembly.LoadFrom(dynamicAssemblies[key]);
-            }
+            loadDynamicAssemblies();
 
+            // populate storage
+            populateWarehouse();
+        }
+
+        private static void loadDynamicAssemblies()
+        {
+            var dynamicAssemblies = (NameValueCollection)ConfigurationManager.GetSection("assemblies");
+            if (dynamicAssemblies != null) 
+            {
+                foreach (string key in dynamicAssemblies)
+                {
+                    Assembly.LoadFrom(dynamicAssemblies[key]);
+                }
+            }
+        }
+
+        private static void populateWarehouse()
+        {
             // get assemblies in current domain
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
             // initialize element factory with all elements declared in application
-            foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 // foreach assembly, find all types with XmppName Attribute
-                foreach(var type in assembly.GetTypes())
+                foreach (var type in assembly.GetTypes())
                 {
                     // check whether it is inheritied from the XmppElement class
                     if (type.IsSubclassOf(typeof(XmppElement)))
