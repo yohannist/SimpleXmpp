@@ -82,19 +82,6 @@ namespace SimpleXmpp.Net
             this.networkStream.BeginWrite(data, 0, data.Length, onSendComplete, null);
         }
 
-        private void beginReading()
-        {
-            try
-            {
-                this.networkStream.BeginRead(this.buffer, 0, BufferSize, onDataReceived, this.networkStream);
-            }
-            catch (IOException ex)
-            {
-                // IOException means that underling socket is closed
-                this.onSocketUnexpectedClosed(ex);
-            }
-        }
-
         private void onConnected(IAsyncResult result)
         {
             try
@@ -146,6 +133,19 @@ namespace SimpleXmpp.Net
             }
         }
 
+        private void beginReading()
+        {
+            try
+            {
+                this.networkStream.BeginRead(this.buffer, 0, BufferSize, onDataReceived, this.networkStream);
+            }
+            catch (IOException ex)
+            {
+                // IOException means that underling socket is closed
+                this.onSocketUnexpectedClosed(ex);
+            }
+        }
+
         private void onDataReceived(IAsyncResult result)
         {
             int bytesRead = 0;
@@ -169,7 +169,11 @@ namespace SimpleXmpp.Net
                 // send it upwards
                 if (this.OnDataReceived != null)
                 {
-                    this.OnDataReceived(this.buffer, bytesRead);
+                    // make a copy of the buffer to send upwards
+                    // otherwise when this buffer is overriden, the data above will also be overriden
+                    var copy = new byte[bytesRead];
+                    Buffer.BlockCopy(this.buffer, 0, copy, 0, bytesRead);
+                    this.OnDataReceived(copy, bytesRead);
                 }
             }
 

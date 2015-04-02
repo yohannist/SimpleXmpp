@@ -59,7 +59,7 @@ namespace GoogleCloudMessaging.Ccs
         private void onConnected()
         {
             // send init
-            var stream = new Stream()
+            var stream = new Stream(true)
             {
                 To = "gcm.googleapis.com",
                 Version = "1.0",

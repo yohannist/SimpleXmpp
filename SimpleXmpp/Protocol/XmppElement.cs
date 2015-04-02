@@ -9,8 +9,14 @@ namespace SimpleXmpp.Protocol
 {
     public class XmppElement : XElement
     {
-        public XmppElement(string name)
+        public XmppElement(XName name)
             : base(name)
+        {
+
+        }
+
+        public XmppElement(XName name, params object[] content)
+            : base(name, content)
         {
 
         }

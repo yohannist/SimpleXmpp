@@ -3,21 +3,35 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace SimpleXmpp.Protocol.stream
 {
-    [XmppName(Stream.Name, "http://etherx.jabber.org/streams")]
+    [XmppName(Stream.NodeName, "http://etherx.jabber.org/streams")]
     public class Stream : XmppElement
     {
-        public const string Name = "stream";
+        public const string NodeName = "stream";
+        public const string NodeNamespace = "http://etherx.jabber.org/streams";
+        public const string NodePrefix = "stream";
         private const string IdAttributeName = "id";
         private const string ToAttributeName = "to";
         private const string VersionAttributeName = "version";
 
         public Stream()
-            : base(Name)
+            : base(NodeName)
         {
+        }
 
+        public Stream(bool applyDefaultNamespace)
+            : base(NodeName)
+        {
+            if (applyDefaultNamespace) 
+            {
+                // this node has to be on it's own name space
+                XNamespace stream = NodeNamespace;
+                this.Add(new XAttribute(XNamespace.Xmlns + NodePrefix, stream));
+                this.Name = stream + this.Name.LocalName;
+            }
         }
 
         public string Id
