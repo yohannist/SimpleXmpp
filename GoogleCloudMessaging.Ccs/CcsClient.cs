@@ -1,4 +1,5 @@
 ﻿using SimpleXmpp;
+using SimpleXmpp.Protocol.Sasl;
 using SimpleXmpp.Protocol.stream;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,8 @@ namespace GoogleCloudMessaging.Ccs
         private const int CcsPort = 5235;
         private const string StagingCcsEndpoint = "gcm-preprod.googleapis.com";
         private const int StagingCcsPort = 5236;
+        private const string PlainAuthenticationMechanism = "PLAIN";
+        private const string PlainAuthenticationPasswordFormat = "{0}@gcm.googleapis.com{1}";
 
         public delegate void OnConnectExceptionHandler(Exception exception);
         public delegate void OnConnectedEventHandler();
@@ -24,6 +27,7 @@ namespace GoogleCloudMessaging.Ccs
         public event OnConnectedEventHandler OnConnected;
 
         private XmppClient xmppClient;
+        private SaslXmppHandler saslHandler;
 
         public string SenderId { get; private set; }
         private string apiKey { get; set; }
@@ -48,6 +52,8 @@ namespace GoogleCloudMessaging.Ccs
             this.xmppClient.OnConnectException += onConnectException;
 
             // setup sasl hander
+            this.saslHandler = new SaslXmppHandler(this.xmppClient);
+            this.saslHandler.AddAuthenticationSet(PlainAuthenticationMechanism, this.getGcmCcsPassword());
         }
 
         public void BeginConnect()
@@ -70,7 +76,13 @@ namespace GoogleCloudMessaging.Ccs
 
         private void onConnectException(Exception ex)
         {
+            // log?
+        }
 
+        private string getGcmCcsPassword()
+        {
+            return Convert.ToBase64String(
+                Encoding.UTF8.GetBytes(string.Format(PlainAuthenticationPasswordFormat, this.SenderId, this.apiKey)));
         }
     }
 }

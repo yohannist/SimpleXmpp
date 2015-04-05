@@ -12,10 +12,10 @@ namespace UnitTests.GoogleCloudMessaging.Ccs
         [TestMethod]
         public void TestMethod1()
         {
-            string senderId = "api-project-478231157746";
+            string senderId = "478231157746";
             string apiKey = "AIzaSyBWZ4vOgCTehXFUOMCublOvp8l6KU3avYA";
 
-            var client = new CcsClient(senderId, apiKey, true);
+            var client = new CcsClient(senderId, apiKey, false);
             client.BeginConnect();
             Thread.Sleep(50000000);
             
