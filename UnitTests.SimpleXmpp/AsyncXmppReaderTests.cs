@@ -26,7 +26,7 @@ namespace UnitTests.SimpleXmpp
         {
             // warm up the XmppElementFactory (initialize lazy loading etc)
             XmppElement element;
-            XmppElementFactory.TryCreateXmppElement("", "", out element);
+            XmppElementFactory.TryCreateXmppElement("", "", "", null, out element);
         }
 
         /// <summary>
@@ -170,10 +170,10 @@ namespace UnitTests.SimpleXmpp
         }
 
         /// <summary>
-        /// incomplete xml
+        /// incomplete xml (allow multiple roots in our use case)
         /// multiple root - exception
-        /// incomplete xml - xmlexception raised
-        /// incomplete xml - ondocumentend not called
+        /// incomplete xml - xmlexception not raised
+        /// incomplete xml - ondocumentend called
         /// </summary>
         [TestMethod]
         public void MultipleRootXml_ValidEventsCalled()
@@ -197,7 +197,7 @@ namespace UnitTests.SimpleXmpp
                 actConnectSleepDisconnect(reader, stream, parsingStates.WaitHandle);
 
                 // assert
-                Assert.IsTrue(parsingStates.XmlExceptionRaised, "xml exception not raised");
+                Assert.IsFalse(parsingStates.XmlExceptionRaised, "xml exception not raised");
                 Assert.IsTrue(parsingStates.EndCalled, "document end is not called");
             }
         }
@@ -240,7 +240,7 @@ namespace UnitTests.SimpleXmpp
 
         private AsyncXmppReader arrangeXmppReader(XmlParsingStates parseStates)
         {
-            var reader = new AsyncXmppReader();
+            var reader = new AsyncXmppReader(new XmlDocument());
 
             // set wait handle when any of these has run
             reader.OnXmlDocumentStart += (node) =>

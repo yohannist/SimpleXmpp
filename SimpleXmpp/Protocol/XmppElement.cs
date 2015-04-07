@@ -3,41 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace SimpleXmpp.Protocol
 {
-    public class XmppElement : XElement
+    public class XmppElement : XmlElement
     {
-        public XmppElement(XName name)
-            : base(name)
+        public XmppElement(string prefix, string name, string ns, XmlDocument parentDocument)
+            : base(prefix, name, ns, parentDocument)
         {
 
         }
 
-        public XmppElement(XName name, params object[] content)
-            : base(name, content)
+        public string GetAttributeValue(string name, string ns = "")
         {
-
+            return base.GetAttribute(name, ns);
         }
 
-        public string GetAttributeValue(string name)
+        public void SetAttributeValue(string name, string value, string ns = "")
         {
-            var attribute = base.Attribute(name);
-            return attribute == null ? null : attribute.Value;
-        }
-
-        public void SetAttributeValue(string name, string value)
-        {
-            var attribute = base.Attribute(name);
-            if (attribute != null)
-            {
-                attribute.Value = value;
-            }
-            else
-            {
-                this.Add(new XAttribute(name, value));
-            }
+            base.SetAttribute(name, ns, value);
         }
 
         /// <summary>
@@ -45,9 +31,9 @@ namespace SimpleXmpp.Protocol
         /// </summary>
         /// <param name="name">The name to match.</param>
         /// <returns></returns>
-        public XmppElement GetElement(string name)
+        public XmppElement GetElement(string nameIncludingPrefix)
         {
-            return base.Element(name) as XmppElement;
+            return base.SelectSingleNode(nameIncludingPrefix) as XmppElement;
         }
 
         /// <summary>
@@ -55,9 +41,9 @@ namespace SimpleXmpp.Protocol
         /// </summary>
         /// <param name="name">The name to match.</param>
         /// <returns></returns>
-        public IEnumerable<XmppElement> GetElements(string name)
+        public IEnumerable<XmppElement> GetElements(string nameIncludingPrefix)
         {
-            return base.Elements(name).Select(e => e as XmppElement);
+            return base.SelectNodes(nameIncludingPrefix).Cast<XmppElement>();
         }
     }
 }

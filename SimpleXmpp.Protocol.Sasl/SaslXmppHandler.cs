@@ -110,14 +110,14 @@ namespace SimpleXmpp.Protocol.Sasl
         private void sendAuthentication(string mechanism, string password)
         {
             // create authentication element
-            var auth = new Auth()
-            {
-                Mechianism = mechanism,
-                Value = password
-            };
+            //var auth = new Auth()
+            //{
+            //    Mechianism = mechanism,
+            //    Value = password
+            //};
 
-            // send it!
-            this.client.Send(auth);
+            //// send it!
+            //this.client.Send(auth);
         }
     }
 }

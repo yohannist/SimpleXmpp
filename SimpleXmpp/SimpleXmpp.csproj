@@ -40,6 +40,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Readers\AsyncXmppReader.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Handlers\XmppHandlerBase.cs" />
     <Compile Include="Net\AsyncSocket.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -51,7 +54,6 @@
     <Compile Include="Protocol\XmppNameAttribute.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Readers\AsyncXmppReader.cs" />
     <Compile Include="XmppClient.cs" />
     <Compile Include="XmppElementFactory.cs" />
   </ItemGroup>

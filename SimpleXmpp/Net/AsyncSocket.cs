@@ -101,7 +101,7 @@ namespace SimpleXmpp.Net
 
                 // use a BufferedStream to increase performance
                 // this can only be done in .NET4.5 because BufferedStream has been upgraded to support async functions
-                this.networkStream = new BufferedStream(this.networkStream);
+                //this.networkStream = new BufferedStream(this.networkStream);
             }
             catch (Exception ex)
             {

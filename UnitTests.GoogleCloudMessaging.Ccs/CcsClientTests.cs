@@ -8,14 +8,14 @@ namespace UnitTests.GoogleCloudMessaging.Ccs
     [TestClass]
     public class CcsClientTests
     {
-        //[Ignore]
+        [Ignore]
         [TestMethod]
         public void TestMethod1()
         {
             string senderId = "478231157746";
             string apiKey = "AIzaSyBWZ4vOgCTehXFUOMCublOvp8l6KU3avYA";
 
-            var client = new CcsClient(senderId, apiKey, false);
+            var client = new CcsClient(senderId, apiKey, true);
             client.BeginConnect();
             Thread.Sleep(50000000);
             

@@ -10,13 +10,20 @@ namespace SimpleXmpp.Readers
 {
     public class AsyncXmppReader
     {
-        private static XmlReaderSettings DefaultXmlReaderSettings = new XmlReaderSettings()
+        private static readonly XmlReaderSettings DefaultXmlReaderSettings = new XmlReaderSettings()
         {
             Async = true,
             IgnoreComments = true,
             IgnoreWhitespace = true,
-            IgnoreProcessingInstructions = true
+            IgnoreProcessingInstructions = true,
+            ConformanceLevel = ConformanceLevel.Fragment,
         };
+
+        private XmlDocument receivingDocument;
+        private XmlNamespaceManager namespaceManager;
+        private XmlParserContext xmlContext;
+        private XmppElement root;
+        private XmppElement currentElement;
 
         public delegate void OnXmppElementEventHandler(XmppElement node);
         public delegate void OnXmlExceptionHandler(XmlException exception);
@@ -40,9 +47,11 @@ namespace SimpleXmpp.Readers
         /// <summary>
         /// Creates
         /// </summary>
-        public AsyncXmppReader()
+        public AsyncXmppReader(XmlDocument receivingDocument)
         {
-
+            this.receivingDocument = receivingDocument;
+            this.namespaceManager = new XmlNamespaceManager(receivingDocument.NameTable);
+            this.xmlContext = new XmlParserContext(null, this.namespaceManager, null, XmlSpace.None);
         }
 
         public void ParseXmppElements(byte[] buffer, int length)
@@ -53,12 +62,9 @@ namespace SimpleXmpp.Readers
             {
                 // create stream from buffer
                 var stream = new MemoryStream(buffer, 0, length);
-
-                // create root node variable
-                XmppElement currentNode = null;
-
+                
                 // create reader
-                using (var reader = XmlReader.Create(stream, DefaultXmlReaderSettings))
+                using (var reader = XmlReader.Create(stream, DefaultXmlReaderSettings, xmlContext))
                 {
                     try
                     {
@@ -69,16 +75,25 @@ namespace SimpleXmpp.Readers
                             {
                                 case XmlNodeType.Element:
                                     // start of a tag
-                                    tagStart(ref currentNode, reader);
+                                    this.tagStart(reader);
+                                    if (reader.IsEmptyElement)
+                                    {
+                                        // self closing element
+                                        // <name />
+                                        this.tagEnd(reader);
+                                    }
                                     break;
                                 case XmlNodeType.Text:
+                                    // add text
+                                    this.addText(reader);
+                                    break;
                                 case XmlNodeType.CDATA:
-                                    // text or cdata
-                                    addText(ref currentNode, reader);
+                                    // add cdata
+                                    this.addCData(reader);
                                     break;
                                 case XmlNodeType.EndElement:
                                     // end of a tag
-                                    tagEnd(ref currentNode, reader);
+                                    this.tagEnd(reader);
                                     break;
                             }
                         }
@@ -93,90 +108,78 @@ namespace SimpleXmpp.Readers
                 }
             });
         }
-        
-        private void tagStart(ref XmppElement currentNode, XmlReader reader)
+
+        private void tagStart(XmlReader reader)
         {
+            // must parse namespaces first
+            // reader will be moved to last attribute
+            this.parseNamespaces(reader);
+            // move it back to element
+            reader.MoveToElement();
+
+            // get element name and ns
             var name = reader.LocalName;
-            var _namespace = reader.LookupNamespace(reader.Prefix);
+            var ns = namespaceManager.LookupNamespace(reader.Prefix);
 
             // create new node using the XmppFactory!
             XmppElement newNode = null;
-            if (!XmppElementFactory.TryCreateXmppElement(name, _namespace, out newNode))
+            if (!XmppElementFactory.TryCreateXmppElement(name, ns, reader.Prefix, receivingDocument, out newNode))
             {
                 // if no specific xmpp element is found, let's go with a regular one
-                newNode = new XmppElement(name);
+                newNode = new XmppElement(reader.Prefix, name, ns, receivingDocument);
             }
 
             // if the code has reached this point, it means the tag/xml is parsable/no namespace issues
             // so we can parse and add namespace information directly into our document
             // this has to be run first so we have namespace information to run for attributes and such later
             // reader will be moved to last attribute
-            parseNamespaceDeclarations(ref newNode, reader);
+            //parseNamespaceDeclarations(ref newNode, reader);
 
             // attach the current node to the document
             bool isNewDocument = false;
-            if (currentNode == null)
+            if (this.root == null)
             {
                 // this is the start of a new document
                 // init node
-                currentNode = newNode;
+                root = currentElement = newNode;
                 isNewDocument = true;
             }
             else
             {
-                // if the current node is not null & the reader depth is 0,
-                // it means that there is more than 1 root element
-                // in xml, there cannot be more than 1 root element
-                if (reader.Depth <= 0 && currentNode != null)
-                {
-                    throw new XmlException(string.Format("There cannot be multiple root elements, {0} and {1}", currentNode.Name, reader.LocalName));
-                }
-
                 // this is a child element
                 // so we append it to the current element
-                currentNode.Add(newNode);
+                currentElement.AppendChild(newNode);
 
                 // after appending, the newnode becomes the current node
-                currentNode = newNode;
+                currentElement = newNode;
             }
-
-            // parse namespace for element
-            // this has to be run after adding to the current tree
-            // reader will be moved to the element ndoe
-            parseNamespace(ref newNode, reader);
 
             // parse attributes if any
             // this has to be run after adding to the current tree
             // reader will be moved to last attribute
-            parseAttributes(ref newNode, reader);
+            this.parseAttributes(reader);
 
             // call document on start if required
             if (isNewDocument && this.OnXmlDocumentStart != null)
             {
-                this.OnXmlDocumentStart(currentNode);
+                this.OnXmlDocumentStart(currentElement);
             }
         }
 
-        private void tagEnd(ref XmppElement currentNode, XmlReader reader)
+        private void tagEnd(XmlReader reader)
         {
             // tag has ended
-            // must make sure the opening and closing tag is the same name
-            if (currentNode.Name.LocalName != reader.LocalName)
-            {
-                throw new XmlException(string.Format("Opening element name ({0}) does not match closing element name ({1})", currentNode.Name, reader.LocalName));
-            }
-
             // call onElement because a complete element is parsed
             if (this.OnXmlElementComplete != null)
             {
-                this.OnXmlElementComplete(currentNode);
+                this.OnXmlElementComplete(this.currentElement);
             }
 
             // end by setting current to parent
-            if (currentNode.Parent != null)
+            if (this.currentElement.ParentNode != null)
             {
-                // this is a safe move because we know every node is created as an XmppNode
-                currentNode = (XmppElement)currentNode.Parent;
+                // this is a safe cast because we know every node is created as an XmppNode
+                this.currentElement = (XmppElement)this.currentElement.ParentNode;
             }
             else
             {
@@ -184,24 +187,27 @@ namespace SimpleXmpp.Readers
                 // call onDocumentEnd
                 if (this.OnXmlDocumentEnd != null)
                 {
-                    this.OnXmlDocumentEnd(currentNode);
+                    this.OnXmlDocumentEnd(this.currentElement);
                 }
             }
         }
 
-        private void addText(ref XmppElement currentNode, XmlReader reader)
+        private void addText(XmlReader reader)
         {
             // set the value of the current node
-            currentNode.Value = reader.Value;
+            this.currentElement.AppendChild(this.receivingDocument.CreateTextNode(reader.Value));
         }
 
-        private void parseNamespaceDeclarations(ref XmppElement node, XmlReader reader)
+        private void addCData(XmlReader reader)
+        {
+            // set the value of the current node
+            this.currentElement.AppendChild(this.receivingDocument.CreateCDataSection(reader.Value));
+        }
+
+        private void parseNamespaces(XmlReader reader)
         {
             if (reader.HasAttributes)
             {
-                // create container
-                var namespaces = new List<XAttribute>(reader.AttributeCount);
-
                 // reset attribute position (just in case)
                 reader.MoveToFirstAttribute();
 
@@ -211,47 +217,25 @@ namespace SimpleXmpp.Readers
                     // only pick up attributes that start with "xmlns"
                     if (string.Equals(reader.Prefix, "xmlns", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        // create new NS attribute
-                        namespaces.Add(new XAttribute(XNamespace.Xmlns + reader.LocalName, reader.Value));
+                        // add scoped namespace to manager
+                        this.namespaceManager.AddNamespace(reader.LocalName, reader.Value);
                     }
                     else if (string.Equals(reader.LocalName, "xmlns", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        // default NS
-                        namespaces.Add(new XAttribute("xmlns", reader.Value));
+                        // add default namespace to manager
+                        this.namespaceManager.AddNamespace(string.Empty, reader.Value);
                     }
 
                 } while (reader.MoveToNextAttribute());
-
-                // add namespaces to current node
-                if (namespaces.Count > 0)
-                {
-                    node.Add(namespaces);
-                }
             }
         }
 
-        private void parseNamespace(ref XmppElement currentNode, XmlReader reader)
-        {
-            // in case the reader is on the attribute
-            reader.MoveToElement();
-
-            if (!string.IsNullOrWhiteSpace(reader.Prefix))
-            {
-                // there is a namespace
-                // let's find it (ns because "namespace" is a keyword)
-                var ns = currentNode.GetNamespaceOfPrefix(reader.Prefix);
-
-                // add it to our node
-                currentNode.Name = ns + currentNode.Name.LocalName;
-            }
-        }
-
-        private void parseAttributes(ref XmppElement currentNode, XmlReader reader)
+        private void parseAttributes(XmlReader reader)
         {
             if (reader.HasAttributes)
             {
-                // create container
-                var attributes = new List<XAttribute>(reader.AttributeCount);
+                // create temp variable
+                XmlAttribute attribute;
 
                 // reset attribute position (just in case)
                 reader.MoveToFirstAttribute();
@@ -260,6 +244,7 @@ namespace SimpleXmpp.Readers
                 do
                 {
                     // skip namespace (and default namespace) declarations
+                    // because they have already been parsed into the namespace manager (connected to current document) earlier
                     if (!string.Equals(reader.Prefix, "xmlns", StringComparison.InvariantCultureIgnoreCase)
                         && !string.Equals(reader.LocalName, "xmlns", StringComparison.InvariantCultureIgnoreCase))
                     {
@@ -267,21 +252,21 @@ namespace SimpleXmpp.Readers
                         {
                             // there is a namespace
                             // let's find it (ns because "namespace" is a keyword)
-                            var ns = currentNode.GetNamespaceOfPrefix(reader.Prefix);
-                            attributes.Add(new XAttribute(ns + reader.LocalName, reader.Value));
+                            var ns = this.namespaceManager.LookupNamespace(reader.Prefix);
+                            attribute = this.receivingDocument.CreateAttribute(reader.Prefix, reader.LocalName, ns);
+                            attribute.Value = reader.Value;
                         }
                         else
                         {
-                            attributes.Add(new XAttribute(reader.LocalName, reader.Value));
+                            // create attribute without namespace
+                            attribute = this.receivingDocument.CreateAttribute(reader.LocalName);
+                            attribute.Value = reader.Value;
                         }
+
+                        // append to element
+                        this.currentElement.Attributes.Append(attribute);
                     }
                 } while (reader.MoveToNextAttribute());
-
-                // add namespaces to current node
-                if (attributes.Count > 0)
-                {
-                    currentNode.Add(attributes);
-                }
             }
         }
 

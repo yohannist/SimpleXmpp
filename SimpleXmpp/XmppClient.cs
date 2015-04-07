@@ -29,6 +29,7 @@ namespace SimpleXmpp
 
         private AsyncSocket asyncSocket;
         private AsyncXmppReader asyncXmppReader;
+        private XmlDocument receivedDocument;
         
         /// <summary>
         /// Gets the hostname set in the constructor
@@ -62,8 +63,11 @@ namespace SimpleXmpp
             this.asyncSocket.OnDataReceived += onDataReceived;
             this.asyncSocket.OnSocketUnexpectedClosed += onSocketUnexpectedlyClosed;
 
+            // init received document
+            receivedDocument = new XmlDocument();
+
             // create reader object and bind events
-            this.asyncXmppReader = new AsyncXmppReader();
+            this.asyncXmppReader = new AsyncXmppReader(receivedDocument);
             this.asyncXmppReader.OnXmlDocumentStart += onXmppDocumentStart;
             this.asyncXmppReader.OnXmlDocumentEnd += onXmppDocumentEnd;
             this.asyncXmppReader.OnXmlElementComplete += onXmppElement;

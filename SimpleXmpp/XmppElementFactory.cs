@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
 using System.Reflection;
+using System.Xml;
 
 namespace SimpleXmpp
 {
     public static class XmppElementFactory
     {
-        private static XmppElementTypeWarehouse typeWarehouse;
+        private static readonly XmppElementTypeWarehouse typeWarehouse;
+        private static readonly Type[] derivedXmppElementConstuctorInfo = new Type[] { typeof(string), typeof(XmlDocument) };
 
         static XmppElementFactory()
         {
@@ -61,19 +63,26 @@ namespace SimpleXmpp
             }
         }
 
-        public static bool TryCreateXmppElement(string name, string _namespace, out XmppElement xmppElement)
+        public static bool TryCreateXmppElement(string name, string ns, string prefix, XmlDocument parentDocument, out XmppElement xmppElement)
         {
             Type xmppType;
-            if (typeWarehouse.TryGet(name, _namespace, out xmppType))
+            if (typeWarehouse.TryGet(name, ns, out xmppType))
             {
                 // if we can find a specific xmpp type from the declared types
                 // return a version of it
-                xmppElement = (XmppElement)System.Activator.CreateInstance(xmppType);
-
-                // for some reason, for XElements created by an Activator, the name property is not populated by the constructor
-                xmppElement.Name = name;
-
-                return true;
+                var constructorInfo = xmppType.GetConstructor(derivedXmppElementConstuctorInfo);
+                if (constructorInfo != null)
+                {
+                    // make sure invoking type has required constructor
+                    xmppElement = (XmppElement)constructorInfo.Invoke(new object[] { prefix, parentDocument });
+                    return true;
+                }
+                else
+                {
+                    // if there is no such constructor, it's as good as not present
+                    xmppElement = null;
+                    return false;
+                }
             }
             else
             {
